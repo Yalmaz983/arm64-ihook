@@ -1,0 +1,42 @@
+name: Static checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checkpatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y perl
+
+      - name: Download checkpatch
+        run: |
+          curl -sL https://raw.githubusercontent.com/torvalds/linux/master/scripts/checkpatch.pl -o checkpatch.pl
+          curl -sL https://raw.githubusercontent.com/torvalds/linux/master/scripts/spelling.txt -o spelling.txt
+          chmod +x checkpatch.pl
+
+      - name: Run checkpatch on source files
+        run: |
+          for f in ihook.c ihook.h tests/ihook_test.c; do
+            echo "=== Checking $f ==="
+            ./checkpatch.pl --no-tree --file --show-types "$f" || true
+          done
+
+  sparse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install sparse
+        run: sudo apt-get update && sudo apt-get install -y sparse
+
+      - name: Run sparse (syntax check only)
+        run: |
+          sparse -Wno-declaration-after-statement ihook.c 2>&1 || true
+          echo "Sparse check complete"
